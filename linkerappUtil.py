@@ -1,10 +1,28 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import mrcfile
 import numpy as np
 import ipywidgets as widgets
 import nglview as nv
 import os
+
 from PyQt5.QtWidgets import QFileDialog
 from pathlib import Path
+from collections import namedtuple
+
+
+__authors__ = ["Elija Feigl"]
+__version__ = "1.0"
+__license__ = "GPL-3.0"
+
+__descr__ = "VIEWERTOOL: utility scripts for viewer-tool"
+__status__ = "Development"
+__maintainer__ = "Elija Feigl"
+__email__ = "elija.feigl@tum.de"
+
+
+Files = namedtuple("Files", ["json", "psf", "coor", "mrc", "seq"])
 
 
 def mrc(atoms_selection, path, context=4, cut_box=True):
@@ -185,7 +203,6 @@ class FileBrowser(object):
         return
 
 
-
 def gui_fileDialog(wd='./', filter="all files (*)"):
     """Select a file via a dialog and return the file name."""
     fnames = QFileDialog.getOpenFileName(None, "Select file...", wd, filter=filter)
@@ -194,5 +211,4 @@ def gui_fileDialog(wd='./', filter="all files (*)"):
 
 def gui_folderDialog(wd='./'):
     """Select a file via a dialog and return the file name."""
-    folder = QFileDialog.getExistingDirectory(None, "Choose folder...", wd)
-    return Path(folder)
+    return QFileDialog.getExistingDirectory(None, "Choose folder...", wd)

@@ -1,13 +1,6 @@
-# Author Elija Feigl 2019.
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
-"""
-This module defines the classes used to define the connectivity and geometry
-of a DNA structure.
-
-A DNA structure consists of a number of scaffold and staple strands
-(DNA origami), or oligo strands alone, bound together to form a designed
-geometric shape.
-"""
 import ipywidgets as widgets
 import MDAnalysis as mda
 
@@ -15,62 +8,42 @@ import mrcfile
 from pathlib import Path
 from IPython.display import display
 
-from linker import Linker
-from project import Project
-from pdbCorrection import PDB_Corr, Logic
+from core.linker import Linker
+from core.project import Project
+from core.pdbCorrection import PDB_Corr, Logic
+
+
+__authors__ = ["Elija Feigl"]
+__version__ = "1.0"
+__license__ = "GPL-3.0"
+
+__descr__ = """
+    VIEWERTOOL:
+    This module defines the classes used to define the connectivity and geometry
+    of a DNA structure.
+
+    A DNA structure consists of a number of scaffold and staple strands
+    (DNA origami), or oligo strands alone, bound together to form a designed
+    geometric shape.
+    """
+__status__ = "Development"
+__maintainer__ = "Elija Feigl"
+__email__ = "elija.feigl@tum.de"
 
 
 class Viewer(object):
-    def __init__(self, folder, name):
+    def __init__(self, folder, files):
+        name = files[0].stem
         self.project = Project(input=Path(folder),
                                output=Path(folder) / "analysis",
                                name=name,
-                               ENmodify=False,
-                               EN="",
+                               files=files,
                                )
         self.linker = Linker(self.project)
         self.selection_scaffold = None
         self.selection_staples = None
 
-    """
-    def select_hb126(self):  # for fako 28.08.2019
-
-        try:
-            link = Linkage(Fbp={},
-                           DidFid={},
-                           DhpsDid={},
-                           Dcolor={},
-                           Dskips=set(),
-                           Fco={},
-                           Fnicks={},
-                           FidSeq={},
-                           universe=("", ""),
-                           )
-            link.load_linkage(self.project)
-            print("used provided dicts for linkage")
-        except (FileNotFoundError, UnicodeDecodeError):
-            link = self.linker.create_linkage()
-
-        scaffold1 = self.linker.fit.scaffold.residues[:7560]
-        scaffold2 = self.linker.fit.scaffold.residues[7560:]
-        staple1 = mda.AtomGroup([], self.linker.fit.u)
-        staple2 = mda.AtomGroup([], self.linker.fit.u)
-
-        for res in iter(scaffold1):
-            try:
-                Fid = link.Fbp[res.resindex]
-                staple1 += self.linker.fit.u.residues[Fid].atoms
-            except KeyError:
-                pass
-        for res in iter(scaffold2):
-            try:
-                Fid = link.Fbp[res.resindex]
-                staple2 += self.linker.fit.u.residues[Fid].atoms
-            except KeyError:
-                pass
-        return scaffold1.atoms + staple1, scaffold2.atoms + staple2"""
-
-    def select(self, helices, bases):
+    def select_by_helixandbase(self, helices, bases):
 
         self._parse_selection(bases, helices)
         link = self.linker.create_linkage()
@@ -100,7 +73,6 @@ class Viewer(object):
         self.selection_scaffold = []
         self.selection_staples = []
         for helix in helices:
-
             selection_scaffold_add = [
                 base for base in helix.scaffold_bases
                 if base.p in base_selection and base.num_deletions == 0 and
@@ -115,7 +87,7 @@ class Viewer(object):
 
         return
 
-    def make_selection(self):
+    def make_sliders(self):
 
         layout_w = widgets.Layout(width='900px', height='70px')
         layout_h = widgets.Layout(width='100px')
@@ -208,7 +180,7 @@ class Viewer(object):
 
         return (helix_buttons, slider_b, slider_c)
 
-    def eval_selection(self, helix_buttons, slider_b, slider_c):
+    def eval_sliders(self, helix_buttons, slider_b, slider_c):
 
         selection_bases = range(slider_b.lower, slider_b.upper + 1)
 
@@ -220,8 +192,7 @@ class Viewer(object):
                     selection_helices.append(int(button.description))
                 except ValueError:
                     pass
-        path = self.project.input / "{}.mrc".format(self.project.name)
-        with mrcfile.open(path, mode='r+') as mrc:
+        with mrcfile.open(self.project.files.mrc, mode='r+') as mrc:
             voxel_size = mrc.voxel_size.x
         context = int(slider_c.value / voxel_size) + 1
 
