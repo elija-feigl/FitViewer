@@ -3,13 +3,10 @@
 
 import mrcfile
 import numpy as np
-import ipywidgets as widgets
 import nglview as nv
-import os
 
 from PyQt5.QtWidgets import QFileDialog
 from pathlib import Path
-from collections import namedtuple
 
 
 __authors__ = ["Elija Feigl"]
@@ -22,81 +19,90 @@ __maintainer__ = "Elija Feigl"
 __email__ = "elija.feigl@tum.de"
 
 
-Files = namedtuple("Files", ["json", "psf", "coor", "mrc", "seq"])
-
-
-def mrc(atoms_selection, path, context=4, cut_box=True):
-
+def mrc(atoms_selection, infile: Path, outfile: Path, context=4, cut_box=True):
     if not len(atoms_selection):
         print("EXIT - no atoms in this selection")
         return
 
     u = atoms_selection.universe
     u.trajectory[-1]
-    with mrcfile.open(str(path) + ".mrc", mode='r+') as mrc:
-        m_o = np.array(mrc.header["origin"])
-        m_origin = np.array([m_o["x"], m_o["y"], m_o["z"]])
-        m_c = np.array(mrc.header["cella"])
-        m_cell = np.array([m_c["x"], m_c["y"], m_c["z"]])
-        m_grid = np.array(
-            [mrc.header["nx"], mrc.header["ny"], mrc.header["nz"]])
-        m_spacing = m_cell / m_grid
-        m_data = mrc.data.transpose()
+    with mrcfile.open(infile) as mrc:
+        voxel_size, grid, origin, full_data = get_mrc_properties(mrc)
 
-    data_mask = np.zeros(m_grid, dtype=np.float32)
-    voxel_size = m_cell / m_grid
+    data_mask = create_voxel_mask(
+        atoms_selection, grid, origin, voxel_size, context)
+    data = full_data * data_mask
+
+    if cut_box:
+        data, origin, voxel_size = mrc_cut_minimalbox(data, origin, voxel_size)
+
+    with mrcfile.new(outfile, overwrite=True) as mrc_out:
+        mrc_out.set_data(data.transpose())
+        mrc_out._set_voxel_size(*voxel_size)
+        mrc_out.header["origin"] = tuple(origin)
+
+
+def create_voxel_mask(atoms_selection, grid, origin, voxel_size, context):
+    data_mask = np.zeros(grid, dtype=np.float32)
     v_context = np.full(3, context / voxel_size).astype(int) + 1
     v_context_x, v_context_y, v_context_z = v_context
 
     grid_positions = np.rint(
-        ((atoms_selection.positions - m_origin) / m_spacing)).astype(int)
+        ((atoms_selection.positions - origin) / voxel_size)).astype(int)
     for pos in grid_positions:
         x, y, z = pos[0], pos[1], pos[2]  # fast to slow axis
         data_mask[x - v_context_x: x + v_context_x,
                   y - v_context_y: y + v_context_y,
                   z - v_context_z: z + v_context_z
                   ] = 1.
-    data = m_data * data_mask
+    return data_mask
 
-    if cut_box:
-        # get rid of zero-padding
-        idx_data = np.nonzero(data)
 
-        x_min, x_max = np.min(idx_data[0]), np.max(idx_data[0])
-        y_min, y_max = np.min(idx_data[1]), np.max(idx_data[1])
-        z_min, z_max = np.min(idx_data[2]), np.max(idx_data[2])
+def get_mrc_properties(mrc):
+    o = np.array(mrc.header["origin"])
+    origin = np.array([o["x"], o["y"], o["z"]])
+    c = np.array(mrc.header["cella"])
+    cell = np.array([c["x"], c["y"], c["z"]])
+    grid = np.array(
+        [mrc.header["nx"], mrc.header["ny"], mrc.header["nz"]])
+    data = mrc.data.transpose()
+    voxel_size = cell / grid
 
-        xyz_diff = max(x_max - x_min, y_max - y_min, z_max - z_min)
-        x_pad = 0.5 * (xyz_diff + x_min - x_max)
-        y_pad = 0.5 * (xyz_diff + y_min - y_max)
-        z_pad = 0.5 * (xyz_diff + z_min - z_max)
-        x_low = int(x_pad) if (x_pad % 1.) == 0. else int(x_pad) + 1
-        y_low = int(y_pad) if (y_pad % 1.) == 0. else int(y_pad) + 1
-        z_low = int(z_pad) if (z_pad % 1.) == 0. else int(z_pad) + 1
+    return (voxel_size, grid, origin, data)
 
-        data_small = np.zeros(
-            (xyz_diff, xyz_diff, xyz_diff), dtype=np.float32)
-        data_small[x_low: -int(x_pad) or None, y_low: -int(y_pad) or None,
-                   z_low: -int(z_pad) or None] = data[x_min: x_max,
-                                                      y_min: y_max,
-                                                      z_min: z_max]
 
-        grid = np.shape(data_small)
-        origin = (m_origin + ((x_min - x_low) * m_spacing[0], (y_min - y_low) *
-                              m_spacing[1], (z_min - z_low) * m_spacing[2]))
-        cell = grid * m_spacing
-        spacing = (cell / grid)
-    else:
-        data_small = data
-        spacing = m_spacing
-        origin = m_origin
+def mrc_cut_minimalbox(data, m_origin, m_spacing):
+    idx_data = np.nonzero(data)
 
-    with mrcfile.new(str(path) + "-tmp.mrc", overwrite=True) as mrc_out:
-        mrc_out.set_data(data_small.transpose())
-        mrc_out._set_voxel_size(*spacing)
-        mrc_out.header["origin"] = tuple(origin)
+    x_min, x_max = np.min(idx_data[0]), np.max(idx_data[0])
+    y_min, y_max = np.min(idx_data[1]), np.max(idx_data[1])
+    z_min, z_max = np.min(idx_data[2]), np.max(idx_data[2])
 
-    return
+    xyz_diff = max(x_max - x_min, y_max - y_min, z_max - z_min)
+    x_pad = 0.5 * (xyz_diff + x_min - x_max)
+    y_pad = 0.5 * (xyz_diff + y_min - y_max)
+    z_pad = 0.5 * (xyz_diff + z_min - z_max)
+    x_low = int(x_pad) if (x_pad % 1.) == 0. else int(x_pad) + 1
+    y_low = int(y_pad) if (y_pad % 1.) == 0. else int(y_pad) + 1
+    z_low = int(z_pad) if (z_pad % 1.) == 0. else int(z_pad) + 1
+
+    data_small = np.zeros(
+        (xyz_diff, xyz_diff, xyz_diff), dtype=np.float32)
+    data_small[x_low: -int(x_pad) or None, y_low: -int(y_pad) or None,
+               z_low: -int(z_pad) or None] = data[x_min: x_max,
+                                                  y_min: y_max,
+                                                  z_min: z_max]
+
+    # cumpute new origin
+    origin = (m_origin + ((x_min - x_low) * m_spacing[0],
+                          (y_min - y_low) * m_spacing[1],
+                          (z_min - z_low) * m_spacing[2]
+                          )
+              )
+    grid = np.shape(data_small)
+    cell = grid * m_spacing
+    spacing = (cell / grid)
+    return data_small, origin, spacing
 
 
 def fit_widget(atoms_selection, atoms_scaffold, atoms_staple, path,
@@ -145,67 +151,11 @@ def fit_widget(atoms_selection, atoms_scaffold, atoms_staple, path,
     return view
 
 
-class FileBrowser(object):
-    """
-    https://gist.github.com/DrDub/6efba6e522302e43d055
-    """
-
-    def __init__(self):
-        self.path = os.getcwd()
-        self._update_files()
-
-    def _update_files(self):
-        self.files = list()
-        self.dirs = list()
-        if(os.path.isdir(self.path)):
-            for f in os.listdir(self.path):
-                ff = self.path + "/" + f
-                if os.path.isdir(ff):
-                    self.dirs.append(f)
-                else:
-                    self.files.append(f)
-
-    def widget(self):
-        box = widgets.VBox()
-        self._update(box)
-        return box
-
-    def _update(self, box):
-
-        layout_button = widgets.Layout(width='800px', height='30px',
-                                       text_align="start",
-                                       border="1px solid black")
-
-        def on_click(b):
-            if b.description == '..':
-                self.path = os.path.split(self.path)[0]
-            else:
-                self.path = self.path + "/" + b.description
-            self._update_files()
-            self._update(box)
-
-        buttons = []
-        if self.files:
-            button = widgets.Button(description='..',
-                                    background_color='#d0d0ff',
-                                    layout=layout_button)
-            button.on_click(on_click)
-            buttons.append(button)
-        for f in self.dirs:
-            button = widgets.Button(description=f,
-                                    background_color='#d0d0ff',
-                                    layout=layout_button)
-            button.on_click(on_click)
-            buttons.append(button)
-
-        box.children = tuple(
-            [widgets.HTML("<h3>%s</h3>" % (self.path,))] + buttons)
-        return
-
-
 def gui_fileDialog(wd='./', filter="all files (*)"):
     """Select a file via a dialog and return the file name."""
-    fnames = QFileDialog.getOpenFileName(None, "Select file...", wd, filter=filter)
+    fnames = QFileDialog.getOpenFileName(
+        None, "Select file...", wd, filter=filter
+    )
     return Path(fnames[0])
 
 

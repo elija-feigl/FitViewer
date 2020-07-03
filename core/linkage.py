@@ -1,14 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import pickle
 import attr
 
-from typing import Dict, Tuple, List, Set
+from typing import Dict, Tuple, Set
 import MDAnalysis as mda
 
-from project import Project
-from crossover import Crossover, CrossoverPicklable
-from basepair import BasePair
 
 __authors__ = ["Elija Feigl"]
 """ VIEWERTOOL:

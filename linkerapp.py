@@ -19,8 +19,8 @@ __license__ = "GPL-3.0"
 
 __descr__ = """
     VIEWERTOOL:
-    This module defines the classes used to define the connectivity and geometry
-    of a DNA structure.
+    This module defines the classes used to define the connectivity and
+    geometry of a DNA structure.
 
     A DNA structure consists of a number of scaffold and staple strands
     (DNA origami), or oligo strands alone, bound together to form a designed
@@ -75,12 +75,12 @@ class Viewer(object):
         for helix in helices:
             selection_scaffold_add = [
                 base for base in helix.scaffold_bases
-                if base.p in base_selection and base.num_deletions == 0 and
-                base.num_insertions == 0]
+                if base.p in base_selection and base.num_deletions == 0
+                and base.num_insertions == 0]
             selection_staples_add = [
                 base for base in helix.staple_bases
-                if base.p in base_selection and base.num_deletions == 0 and
-                base.num_insertions == 0]
+                if base.p in base_selection and base.num_deletions == 0
+                and base.num_insertions == 0]
 
             self.selection_scaffold += selection_scaffold_add
             self.selection_staples += selection_staples_add
