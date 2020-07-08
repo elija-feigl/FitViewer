@@ -39,7 +39,7 @@ class Fit(object):
         return u
 
     def _split_strands(self) -> Tuple["mda.segment", List["mda.segment"]]:
-        # TODO: -low- multiscaffold
+        # NOTE: no mulitscaffold
         strands = self.u.segments
         scaffold = max(strands, key=attrgetter("residues.n_residues"))
         staples = [strand for strand in strands if len(

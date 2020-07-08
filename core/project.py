@@ -18,7 +18,6 @@ Files = namedtuple("Files", ["json", "psf", "coor", "mrc", "seq"])
 @attr.s(slots=True)
 class Project(object):
 
-    input: Path = attr.ib()
-    output: Path = attr.ib()
+    folder: Path = attr.ib()
     name: str = attr.ib()
     files: "Files" = attr.ib()

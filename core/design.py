@@ -27,7 +27,7 @@ class Design(object):
     project: Project = attr.ib()
 
     def __attrs_post_init__(self):
-        self.infile = self.project.input / self.project.name
+        self.infile = self.project.folder / self.project.name
         self.design = self._get_design()
         self.scaffold = self._scaffold()
         self.staples = self._staple()
@@ -52,7 +52,7 @@ class Design(object):
         return strand
 
     def _scaffold(self) -> List[DnaBase]:
-        # TODO: -low- multiscaffold
+        # NOTE: no multiscaffold
         scaffold = [s.tour for s in self.design.strands if s.is_scaffold][0]
         self._close_strand(strand=scaffold)
         return scaffold
