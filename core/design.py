@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-3#
+# -*- coding: utf-8 -*-
 import attr
 
 from typing import List, Dict, Set, Tuple
@@ -44,7 +44,7 @@ class Design(object):
             hps_base[position] = base
         return hps_base
 
-    def _close_strand(self, strand):
+    def _close_strand(self, strand: List[DnaBase]) -> List[DnaBase]:
         start = strand[0]
         end = strand[-1]
         start.up, end.down = end, start
