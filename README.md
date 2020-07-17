@@ -22,10 +22,13 @@ required PyPI packages:
 ipywidgets >= 7.5.1
 mrcfile >= 1.1.2
 MDAnalysis >= 1.0.0
-PyQt5 >= 5.14.2
 nglview >= 2.7.7
 numpy >= 1.18.4
 attrs >= 19.3.0
+```
+optional PyPI packages:
+```
+PyQt5 >= 5.14.2
 ```
 
 ## Supported formats
