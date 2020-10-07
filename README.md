@@ -1,4 +1,4 @@
-[![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0) [![Python-version:](https://img.shields.io/badge/python-v3.7-green)]() | [FitViewer](#fitviewer) | [Usage](#usage) | [Requirements](#requirements) | [References](#references) 
+[![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0) [![Python-version:](https://img.shields.io/badge/python-v3.7-green)]() | [![DOI](https://zenodo.org/badge/278063664.svg)](https://zenodo.org/badge/latestdoi/278063664)| [FitViewer](#fitviewer) | [Usage](#usage) | [Requirements](#requirements) | [References](#references) 
 
 # FitViewer
 [FitViewer](https://github.com/elija-feigl/FitViewer) for context based zoning and cropping of cryo-EM maps using pseudoatomic models fitting into cryo-EM electrondensity maps of lattice based DNA origami structures
