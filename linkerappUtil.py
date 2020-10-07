@@ -9,7 +9,7 @@ from operator import attrgetter
 from MDAnalysis.core.groups import AtomGroup
 
 __authors__ = ["Elija Feigl"]
-__version__ = "0.4"
+__version__ = "1.0.0"
 __license__ = "GPL-3.0"
 
 __descr__ = "VIEWERTOOL: utility scripts for viewer-tool"

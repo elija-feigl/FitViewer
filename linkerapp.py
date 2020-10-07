@@ -17,7 +17,7 @@ from linkerappUtil import _create_voxel_mask, _mrc_cutbox, _get_mrc_properties
 
 
 __authors__ = ["Elija Feigl"]
-__version__ = "0.4"
+__version__ = "1.0.0"
 __license__ = "GPL-3.0"
 
 __descr__ = """
