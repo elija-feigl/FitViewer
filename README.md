@@ -38,5 +38,5 @@ PyQt5 >= 5.14.2
 # References
 When using [FitViewer](https://github.com/elija-feigl/FitViewer) in published work, please cite the following paper:
 
-manuscript status:  10.07.2020 currently under review
+Kube, M., Kohler, F., Feigl, E. et al. Revealing the structures of megadalton-scale DNA complexes with nucleotide resolution. Nat Commun 11, 6229 (2020). https://doi.org/10.1038/s41467-020-20020-7
 
