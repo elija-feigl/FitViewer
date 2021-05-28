@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List
@@ -43,16 +44,28 @@ class Viewer(object):
     is_mrdna: bool = True
 
     def __post_init__(self):
+        self.logger = self._setup_logger()
         self.linker = Linker(conf=self.conf, top=self.top, json=self.json, seq=self.seq,
                              generated_with_mrdna=self.is_mrdna)
         try:
             self.link: Linkage = self.linker.create_linkage()
         except:
-            print("ERROR: The provided design is not compatible with the atomic.")
+            self.logger.error(
+                "ERROR: The provided design is not compatible with the atomic.")
 
         self.u = self.linker.fit.u
         self.Hid2H = self.linker.design.design.structure_helices_map
         self.Hcoor2H = self.linker.design.design.structure_helices_coord_map
+
+    def _setup_logger(self):
+        logger = logging.getLogger(__name__)
+        logger.setLevel(logging.DEBUG)
+        handler = logging.StreamHandler()
+        formatter = logging.Formatter(
+            '%(asctime)s | [%(name)s] %(levelname)s - %(message)s')
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+        return logger
 
     def select_by_helixandbase(self, helices: List, bases: List):
         def _DhpsFid(h, p, s) -> int:
@@ -67,6 +80,55 @@ class Viewer(object):
                 Fid = _DhpsFid(base.h, base.p, bool(idx))
                 atoms += u.residues[Fid].atoms
         return atoms, self.link.Dcolor
+
+    def select_dsDNA(self, atoms=None):
+        if atoms is None:
+            residues = self.u.residues
+        else:
+            residues = atoms.residues
+
+        atoms_ds = self.empty_atomGroup()
+        for residue in residues:
+            if residue.resindex in self.link.Fbp_full.keys():
+                atoms_ds += residue.atoms
+        return atoms_ds
+
+    def select_scaffold(self, atoms=None):
+        if atoms is None:
+            residues = self.u.residues
+        else:
+            residues = atoms.residues
+
+        atoms_sc = self.empty_atomGroup()
+        for residue in residues:
+            if residue.resindex in self.link.Fbp.keys():
+                atoms_sc += residue.atoms
+        return atoms_sc
+
+    def select_withoutH(self, atoms=None):
+        if atoms is None:
+            atoms = self.u.atoms
+
+        atoms_noH = self.empty_atomGroup()
+        for atom in atoms:
+            if "H" not in atom.name:
+                atoms_noH += atom
+        return atoms_noH
+
+    def write_custom_gridpdb(self, atoms_selected, name=None, destination=None):
+        self.u.add_TopologyAttr('tempfactor')
+        self.u.add_TopologyAttr('occupancy')
+
+        for atom in self.link.u.atoms:
+            if "H" not in atom.name and atom in atoms_selected:
+                atom.tempfactor = atom.mass
+                atom.occupancy = 1.
+        if name is None:
+            name = self.conf.name + "_grid"
+        self.writepdb(atoms=self.u.atoms, name=name,
+                      destination=destination, as_mmCif=False)
+        self.u.atoms.write("/Users/elija/Desktop/grid_s.pdb", bonds=None)
+        return
 
     def _parse_selection(self, base_pos: List, helix_ids: List) -> List:
         helices = [self.Hid2H[idx] for idx in helix_ids]
@@ -150,16 +212,23 @@ class Viewer(object):
         import warnings
         warnings.filterwarnings('ignore')
 
+        if not len(atoms):
+            self.logger.warning("Empty atom selection. No file written.")
+            return
+
         if destination is None:
-            print("No target destination provided. Using configuration file folder.")
+            self.logger.info(
+                "No target destination provided. Using configuration file folder.")
             destination = self.conf.parent
         elif isinstance(destination, str):
             destination = Path(destination)
         else:
-            print("Invalid target destination path. Using configuration file folder.")
+            self.logger.info(
+                "Invalid target destination path. Using configuration file folder.")
             destination = self.conf.parent
         if name is None:
-            print("No target name provided. Using configuration file name.")
+            self.logger.info(
+                "No target name provided. Using configuration file name.")
             name = self.conf.name
 
         path = destination / f"{name}.pdb"
@@ -174,23 +243,29 @@ class Viewer(object):
                     W.write(atoms)
 
         if as_mmCif:
-            # NOTE: Hydrogen removed is standart for RCSB upload
-            structure = Structure(path=path, remove_H=True)
+            structure = Structure(path=path, remove_H=False)
             structure.parse_pdb()
             mmcif = self.conf.with_suffix(".cif")
             structure.write_cif(mmcif)
 
     def writedcd(self, atoms, name=None, destination=None):
+        if not len(atoms):
+            self.logger.warning("Empty atom selection. No file written.")
+            return
+
         if destination is None:
-            print("No target destination provided. Using configuration file folder.")
+            self.logger.info(
+                "No target destination provided. Using configuration file folder.")
             destination = self.conf.parent
         elif isinstance(destination, str):
             destination = Path(destination)
         else:
-            print("Invalid target destination path. Using configuration file folder.")
+            self.logger.info(
+                "Invalid target destination path. Using configuration file folder.")
             destination = self.conf.parent
         if name is None:
-            print("No target name provided. Using configuration file name.")
+            self.logger.info(
+                "No target name provided. Using configuration file name.")
             name = self.conf.name
 
         path = destination / f"{name}.dcd"
@@ -201,15 +276,18 @@ class Viewer(object):
 
     def writemrc(self, atomsXX, name=None, destination=None, context=4, cut_box=True):
         if destination is None:
-            print("No target destination provided. Using configuration file folder.")
+            self.logger.info(
+                "No target destination provided. Using configuration file folder.")
             destination = self.conf.parent
         elif isinstance(destination, str):
             destination = Path(destination)
         else:
-            print("Invalid target destination path. Using configuration file folder.")
+            self.logger.info(
+                "Invalid target destination path. Using configuration file folder.")
             destination = self.conf.parent
         if name is None:
-            print("No target name provided. Using configuration file name.")
+            self.logger.info(
+                "No target name provided. Using configuration file name.")
             name = self.conf.name
 
         path = destination / f"{name}.mrc"
