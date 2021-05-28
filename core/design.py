@@ -98,9 +98,14 @@ class Design(object):
             stapleorder
                 nanodesign -> enrgMD
         """
-        Dhps = [(self.helixorder[s[0].h], s[0].p)
-                for s in self.staples
-                ]
+        if self.project.mrdna:
+            Dhps = [(s[0].h, s[0].p)
+                    for s in self.staples
+                    ]
+        else:
+            Dhps = [(self.helixorder[s[0].h], s[0].p)
+                    for s in self.staples
+                    ]
         Dhps_sorted = sorted(Dhps, key=lambda x: (x[0], x[1]))
         order_ND = [
             Dhps.index(Dhps_sorted[i])

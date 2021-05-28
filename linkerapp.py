@@ -35,11 +35,12 @@ __email__ = "elija.feigl@tum.de"
 
 
 class Viewer(object):
-    def __init__(self, folder: str, files: Files):
+    def __init__(self, folder: str, files: Files, mrdna: bool = False):
         name = files[0].stem
         self.project = Project(folder=Path(folder),
                                name=name,
                                files=files,
+                               mrdna=mrdna,
                                )
         self.linker = Linker(self.project)
         self.link = self.linker.create_linkage()
@@ -166,6 +167,14 @@ class Viewer(object):
                                                )
             with open(path_corr, "w") as file_corr:
                 file_corr.write(newFile)
+
+    def writedcd(self, atoms, name):
+        inp = self.project.folder
+        path = inp / "{}.dcd".format(name)
+
+        with mda.Writer(path.as_posix(), n_atoms=atoms.n_atoms) as W:
+            for _ in self.link.u.trajectory:
+                W.write(atoms)
 
     def writemrc(self, atomsXX, name: str, context=4, cut_box=True):
         if not len(atomsXX):

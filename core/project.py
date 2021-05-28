@@ -21,3 +21,4 @@ class Project(object):
     folder: Path = attr.ib()
     name: str = attr.ib()
     files: "Files" = attr.ib()
+    mrdna: bool = attr.ib()
