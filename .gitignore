@@ -19,5 +19,5 @@ eggs/
 .mypy_cache/
 test/**
 
-# exclude legacy code
-dnaFit/legacy/**
+# jupyter
+.ipynb_checkpoints/
