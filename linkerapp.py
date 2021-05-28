@@ -1,26 +1,28 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import ipywidgets as widgets
-import MDAnalysis as mda
-
-import mrcfile
+from dataclasses import dataclass
 from pathlib import Path
 from typing import List
+
+import ipywidgets as widgets
+import MDAnalysis as mda
+import mrcfile
+from dnaFit.data.mrc import write_mrc_from_atoms
+from dnaFit.link.linkage import Linkage
+from dnaFit.link.linker import Linker
+from dnaFit.pdb.structure import Structure
 from IPython.display import display
-
-from core.linker import Linker
-from core.project import Project, Files
-from core.pdbCorrection import PDB_Corr, Logic
-
-from linkerappUtil import _create_voxel_mask, _mrc_cutbox, _get_mrc_properties
-
+from MDAnalysis.core.groups import AtomGroup
 
 __authors__ = ["Elija Feigl"]
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 __license__ = "GPL-3.0"
+__status__ = "Development"
+__maintainer__ = "Elija Feigl"
+__email__ = "elija.feigl@tum.de"
 
-__descr__ = """
+"""
     VIEWERTOOL:
     This module defines the classes used to define the connectivity and
     geometry of a DNA structure.
@@ -28,22 +30,27 @@ __descr__ = """
     A DNA structure consists of a number of scaffold and staple strands
     (DNA origami), or oligo strands alone, bound together to form a designed
     geometric shape.
-    """
-__status__ = "Development"
-__maintainer__ = "Elija Feigl"
-__email__ = "elija.feigl@tum.de"
+"""
 
 
+@dataclass
 class Viewer(object):
-    def __init__(self, folder: str, files: Files, mrdna: bool = False):
-        name = files[0].stem
-        self.project = Project(folder=Path(folder),
-                               name=name,
-                               files=files,
-                               mrdna=mrdna,
-                               )
-        self.linker = Linker(self.project)
-        self.link = self.linker.create_linkage()
+    conf: Path
+    top: Path
+    mrc: Path
+    json: Path
+    seq: Path
+    is_mrdna: bool = True
+
+    def __post_init__(self):
+        self.linker = Linker(conf=self.conf, top=self.top, json=self.json, seq=self.seq,
+                             generated_with_mrdna=self.is_mrdna)
+        try:
+            self.link: Linkage = self.linker.create_linkage()
+        except:
+            print("ERROR: The provided design is not compatible with the atomic.")
+
+        self.u = self.linker.fit.u
         self.Hid2H = self.linker.design.design.structure_helices_map
         self.Hcoor2H = self.linker.design.design.structure_helices_coord_map
 
@@ -133,21 +140,31 @@ class Viewer(object):
                              if (not b.disabled and b.value)
                              ]
 
-        with mrcfile.open(self.project.files.mrc, mode='r+') as mrc:
+        with mrcfile.open(self.mrc, mode='r+') as mrc:
             voxel_size = mrc.voxel_size.x
         context = int(slider_c.value / voxel_size) + 1
 
         return (selection_helices, selection_bases), context
 
-    def writepdb(self, atoms, name, singleframe=True, frame=-1, chimeraX=True):
+    def writepdb(self, atoms, name=None, destination=None, singleframe=True, frame=-1, as_mmCif=True):
         import warnings
         warnings.filterwarnings('ignore')
 
-        inp = self.project.folder
-        path_in = inp / "{}.pdb".format(name)
-        path_corr = inp / "{}_chim.pdb".format(name)
+        if destination is None:
+            print("No target destination provided. Using configuration file folder.")
+            destination = self.conf.parent
+        elif isinstance(destination, str):
+            destination = Path(destination)
+        else:
+            print("Invalid target destination path. Using configuration file folder.")
+            destination = self.conf.parent
+        if name is None:
+            print("No target name provided. Using configuration file name.")
+            name = self.conf.name
 
-        with mda.Writer(path_in, multiframe=True,
+        path = destination / f"{name}.pdb"
+
+        with mda.Writer(path, multiframe=True,
                         n_atoms=atoms.n_atoms) as W:
             if singleframe:
                 self.link.u.trajectory[frame]
@@ -156,41 +173,48 @@ class Viewer(object):
                 for _ in self.link.u.trajectory:
                     W.write(atoms)
 
-        if chimeraX:
-            logic = Logic(keep_header=False,
-                          remove_H=False,
-                          )
-            pdb_Corr = PDB_Corr()
-            with open(path_in, "r") as file_init:
-                newFile = pdb_Corr.correct_pdb(pdb_file=file_init,
-                                               logic=logic,
-                                               )
-            with open(path_corr, "w") as file_corr:
-                file_corr.write(newFile)
+        if as_mmCif:
+            # NOTE: Hydrogen removed is standart for RCSB upload
+            structure = Structure(path=path, remove_H=True)
+            structure.parse_pdb()
+            mmcif = self.conf.with_suffix(".cif")
+            structure.write_cif(mmcif)
 
-    def writedcd(self, atoms, name):
-        inp = self.project.folder
-        path = inp / "{}.dcd".format(name)
+    def writedcd(self, atoms, name=None, destination=None):
+        if destination is None:
+            print("No target destination provided. Using configuration file folder.")
+            destination = self.conf.parent
+        elif isinstance(destination, str):
+            destination = Path(destination)
+        else:
+            print("Invalid target destination path. Using configuration file folder.")
+            destination = self.conf.parent
+        if name is None:
+            print("No target name provided. Using configuration file name.")
+            name = self.conf.name
+
+        path = destination / f"{name}.dcd"
 
         with mda.Writer(path.as_posix(), n_atoms=atoms.n_atoms) as W:
             for _ in self.link.u.trajectory:
                 W.write(atoms)
 
-    def writemrc(self, atomsXX, name: str, context=4, cut_box=True):
-        if not len(atomsXX):
-            raise ValueError("no atoms in this selection")
-        path_out = self.project.folder / "{}.mrc".format(name)
-        u = atomsXX.universe
-        u.trajectory[-1]
-        with mrcfile.open(self.project.files.mrc) as mrc:
-            voxel, grid, origin, full_data = _get_mrc_properties(mrc)
+    def writemrc(self, atomsXX, name=None, destination=None, context=4, cut_box=True):
+        if destination is None:
+            print("No target destination provided. Using configuration file folder.")
+            destination = self.conf.parent
+        elif isinstance(destination, str):
+            destination = Path(destination)
+        else:
+            print("Invalid target destination path. Using configuration file folder.")
+            destination = self.conf.parent
+        if name is None:
+            print("No target name provided. Using configuration file name.")
+            name = self.conf.name
 
-        data_mask = _create_voxel_mask(atomsXX, grid, origin, voxel, context)
-        data = full_data * data_mask
-        if cut_box:
-            data, origin, voxel = _mrc_cutbox(data, origin, voxel)
+        path = destination / f"{name}.mrc"
+        write_mrc_from_atoms(path=self.mrc, atoms=atomsXX,
+                             path_out=path, context=context, cut_box=cut_box)
 
-        with mrcfile.new(path_out, overwrite=True) as mrc_out:
-            mrc_out.set_data(data.transpose())
-            mrc_out._set_voxel_size(*voxel)
-            mrc_out.header["origin"] = tuple(origin)
+    def empty_atomGroup(self) -> AtomGroup:
+        return AtomGroup([], self.u)
