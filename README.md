@@ -10,7 +10,7 @@ start the interactive Jupyter-Notebook by executing the the following command fr
 jupyter notebook viewertool.ipynb
 ```
 Step by step instructions are provided in the Jupyter notebook
-Note: your notebook has to run with the correct [ipython kernel](https://ipython.readthedocs.io/en/stable/install/kernel_install.html), to access all dependencies.
+
 
 # Requirements
 [FitViewer](https://github.com/elija-feigl/FitViewer) is currently distributed as a [Jupyter Notebook](https://jupyter.org/documentation). It requires an [ipytohn kernel](https://ipython.readthedocs.io/en/stable/install/kernel_install.html) with the follwoing dependencies:
