@@ -4,11 +4,13 @@
 [FitViewer](https://github.com/elija-feigl/FitViewer) for context based zoning and cropping of cryo-EM maps using pseudoatomic models fitting into cryo-EM electrondensity maps of lattice based DNA origami structures
 
 # Usage
+
 start the interactive Jupyter-Notebook by executing the the following command from the repository directory:
 ```
 jupyter notebook viewertool.ipynb
 ```
 Step by step instructions are provided in the Jupyter notebook
+Note: your notebook has to run with the correct [ipython kernel](https://ipython.readthedocs.io/en/stable/install/kernel_install.html), to access all dependencies.
 
 # Requirements
 [FitViewer](https://github.com/elija-feigl/FitViewer) is currently distributed as a [Jupyter Notebook](https://jupyter.org/documentation). It requires an [ipytohn kernel](https://ipython.readthedocs.io/en/stable/install/kernel_install.html) with the follwoing dependencies:
@@ -16,14 +18,13 @@ Step by step instructions are provided in the Jupyter notebook
 python >= 3.8.0
 ```
 
-dietzlab_dnaFit:
-https://github.com/elija-feigl/dnaFit
+[dnaFit](https://github.com/elija-feigl/DNA_Fit) DNA Origami atomic model package
 
 required PyPI packages:
 ```
-ipywidgets >= 7.5.1
-mrcfile >= 1.1.2
-MDAnalysis >= 1.0.0
+ipywidget
+ipython
+jupyter
 ```
 
 ## Supported formats
