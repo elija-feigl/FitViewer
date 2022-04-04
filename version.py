@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0.html.
 
-__version__ = "1.2.0"
+__version__ = "1.3.0"
 __authors__ = ["Elija Feigl"]
 __copyright__ = "Copyright (C) 2021  Elija Feigl"
 __credits__ = ["Autodesk: Nanodesign", "MDAnalysis", "mrcfile"]
